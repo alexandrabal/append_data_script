@@ -65,7 +65,7 @@ long_df["channel"] = np.select(
         long_df["source_column"] == "LinkedIn Spend",
         long_df["source_column"] == "Organic Spend",
     ],
-    ["Adwords", "Display", "Linkedin", "Organic"],
+    ["AdWords", "Display", "Linkedin", "Organic"],
     default="other"
 )
 

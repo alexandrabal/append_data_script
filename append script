@@ -9,7 +9,7 @@ OUTPUT_CSV = "growth_spend_long.csv"
 NUM_WEEKS = 48
 
 # Columns to stack
-SPEND_COLS = ["AdWords Spend", "LinkedIn Spend", "Organic Spend"]
+SPEND_COLS = ["AdWords Spend", "Display Spend","LinkedIn Spend", "Organic Spend"]
 
 # ---- LOAD DATA ----
 df = pd.read_csv(INPUT_CSV)

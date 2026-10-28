@@ -107,6 +107,7 @@ if not np.isclose(raw_total, before_total):
     )
 
 # ---- FINAL OUTPUT ----
+long_df["spend"] = pd.to_numeric(long_df["spend"], errors="coerce")
 long_df = long_df[["week", "spend", "channel"]]
 
 long_df.to_csv(OUTPUT_CSV, index=False)

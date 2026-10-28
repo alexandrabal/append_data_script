@@ -1,0 +1,117 @@
+
+import pandas as pd
+import numpy as np
+from google.colab import files
+
+# ---- SETTINGS ----
+INPUT_CSV = "/content/sample_data/Growth_spend.csv"
+OUTPUT_CSV = "growth_spend_long.csv"
+NUM_WEEKS = 48
+
+# Columns to stack
+SPEND_COLS = ["AdWords Spend", "LinkedIn Spend", "Organic Spend"]
+
+# ---- LOAD DATA ----
+df = pd.read_csv(INPUT_CSV)
+df.columns = df.columns.str.strip()
+
+# ---- CLEAN SPEND COLUMNS ----
+# Remove $, commas, and surrounding whitespace
+# Convert values to numeric
+for col in SPEND_COLS:
+    df[col] = pd.to_numeric(
+        df[col]
+        .astype(str)
+        .str.replace("$", "", regex=False)
+        .str.replace(",", "", regex=False)
+        .str.strip()
+        .replace(["", "nan", "None", "N/A", "NA"], np.nan),
+        errors="coerce"
+    )
+
+# ---- CHECK FOR INVALID VALUES ----
+for col in SPEND_COLS:
+    invalid_count = df[col].isna().sum()
+    if invalid_count > 0:
+        print(f"WARNING: {col} contains {invalid_count} missing or invalid values.")
+
+# Total across the whole file before trimming
+raw_total = df[SPEND_COLS].sum().sum()
+
+# ---- CREATE WEEK COLUMN / LIMIT TO 48 WEEKS ----
+if "week" not in df.columns:
+    df = df.head(NUM_WEEKS).copy()
+    df["week"] = range(1, len(df) + 1)
+else:
+    df = df.head(NUM_WEEKS).copy()
+
+# ---- BEFORE: SUMS FROM WIDE TABLE ----
+before_by_col = df[SPEND_COLS].sum()
+before_total = before_by_col.sum()
+
+# ---- CONVERT WIDE DATA TO LONG FORMAT ----
+long_df = df.melt(
+    id_vars=["week"],
+    value_vars=SPEND_COLS,
+    var_name="source_column",
+    value_name="spend"
+)
+
+# ---- MAP SOURCE COLUMNS TO CHANNELS ----
+long_df["channel"] = np.select(
+    [
+        long_df["source_column"] == "AdWords Spend",
+        long_df["source_column"] == "Display Spend",
+        long_df["source_column"] == "LinkedIn Spend",
+        long_df["source_column"] == "Organic Spend",
+    ],
+    ["Adwords", "Display", "Linkedin", "Organic"],
+    default="other"
+)
+
+# ---- AFTER: SUMS FROM LONG TABLE ----
+after_by_channel = long_df.groupby("source_column")["spend"].sum()
+after_total = long_df["spend"].sum()
+
+# ---- RECONCILIATION CHECK ----
+check = pd.DataFrame({
+    "before": before_by_col,
+    "after": after_by_channel.reindex(before_by_col.index)
+})
+
+check["diff"] = check["after"] - check["before"]
+
+check.loc["TOTAL"] = [
+    before_total,
+    after_total,
+    after_total - before_total
+]
+
+print("\nSpend reconciliation (before vs after):")
+print(check.to_string(float_format=lambda x: f"{x:,.2f}"))
+
+print(f"\nRows: {len(long_df)} (expected {len(df) * len(SPEND_COLS)})")
+print(f"Full-file total (before 48-week trim): {raw_total:,.2f}")
+print(f"Total after 48-week trim: {before_total:,.2f}")
+
+if np.isclose(before_total, after_total):
+    print("PASS: totals match")
+else:
+    print("FAIL: totals do not match")
+
+if not np.isclose(raw_total, before_total):
+    print(
+        f"WARNING: {raw_total - before_total:,.2f} "
+        f"of spend difference exists between the full file "
+        f"and the first {NUM_WEEKS} rows."
+    )
+
+# ---- FINAL OUTPUT ----
+long_df = long_df[["week", "spend", "channel"]]
+
+long_df.to_csv(OUTPUT_CSV, index=False)
+
+print(f"\nExported successfully: {OUTPUT_CSV}")
+
+# ---- DOWNLOAD CSV ----
+files.download(OUTPUT_CSV)

@@ -1,0 +1,31 @@
+import pandas as pd
+from google.colab import files
+
+# ---- SETTINGS ----
+input_file = "/content/sample_data/GrowthOperations.csv"
+output_file = "/content/sample_data/Growth Operations_cleaned.csv"
+column = "Time Until Verification"
+
+# Read the CSV
+df = pd.read_csv(input_file)
+
+# Remove accidental spaces from column names
+df.columns = df.columns.str.strip()
+
+# Check the column exists
+if column not in df.columns:
+    print("Available columns:", df.columns.tolist())
+    raise ValueError(f"Column '{column}' not found.")
+
+# Replace blanks, whitespace and missing values with 0
+df[column] = df[column].replace(r'^\s*$', 0, regex=True).fillna(0)
+
+# Save the cleaned CSV
+df.to_csv(output_file, index=False)
+
+# Verify results
+print(f"Done! Blanks in '{column}' replaced with 0.")
+print("Missing values remaining:", df[column].isna().sum())
+
+# Download the cleaned file
+files.download(output_file)

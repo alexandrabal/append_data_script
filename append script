@@ -9,15 +9,19 @@ OUTPUT_CSV = "growth_spend_long.csv"
 NUM_WEEKS = 48
 
 # Columns to stack
-SPEND_COLS = ["AdWords Spend", "Display Spend","LinkedIn Spend", "Organic Spend"]
+SPEND_COLS = [
+    "AdWords Spend",
+    "Display Spend",
+    "LinkedIn Spend",
+    "Organic Spend"
+]
 
 # ---- LOAD DATA ----
 df = pd.read_csv(INPUT_CSV)
 df.columns = df.columns.str.strip()
 
 # ---- CLEAN SPEND COLUMNS ----
-# Remove $, commas, and surrounding whitespace
-# Convert values to numeric
+# Remove $, commas, and whitespace; convert to numeric
 for col in SPEND_COLS:
     df[col] = pd.to_numeric(
         df[col]
@@ -35,10 +39,10 @@ for col in SPEND_COLS:
     if invalid_count > 0:
         print(f"WARNING: {col} contains {invalid_count} missing or invalid values.")
 
-# Total across the whole file before trimming
+# ---- FULL-FILE TOTAL BEFORE TRIMMING ----
 raw_total = df[SPEND_COLS].sum().sum()
 
-# ---- CREATE WEEK COLUMN / LIMIT TO 48 WEEKS ----
+# ---- LIMIT TO 48 WEEKS / CREATE WEEK COLUMN ----
 if "week" not in df.columns:
     df = df.head(NUM_WEEKS).copy()
     df["week"] = range(1, len(df) + 1)
@@ -107,13 +111,20 @@ if not np.isclose(raw_total, before_total):
     )
 
 # ---- FINAL OUTPUT ----
-long_df["spend"] = pd.to_numeric(long_df["spend"], errors="coerce")
-long_df = long_df[["week", "spend", "channel"]]
+long_df = long_df[["week", "spend", "channel"]].copy()
 
+# Preserve exactly 2 decimal places in the exported CSV
+# Examples: 58444.90, 500.00, 0.00
+long_df["spend"] = long_df["spend"].map(
+    lambda x: f"{x:.2f}" if pd.notna(x) else ""
+)
+
+# ---- EXPORT CSV ----
 long_df.to_csv(OUTPUT_CSV, index=False)
 
 print(f"\nExported successfully: {OUTPUT_CSV}")
-
+print("\nFirst 10 rows of exported data:")
+print(long_df.head(10).to_string(index=False))
 
 # ---- DOWNLOAD CSV ----
 files.download(OUTPUT_CSV)

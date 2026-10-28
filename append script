@@ -65,7 +65,7 @@ long_df["channel"] = np.select(
         long_df["source_column"] == "LinkedIn Spend",
         long_df["source_column"] == "Organic Spend",
     ],
-    ["AdWords", "Display", "Linkedin", "Organic"],
+    ["AdWords", "Display", "LinkedIn", "Organic"],
     default="other"
 )
 
@@ -113,6 +113,7 @@ long_df = long_df[["week", "spend", "channel"]]
 long_df.to_csv(OUTPUT_CSV, index=False)
 
 print(f"\nExported successfully: {OUTPUT_CSV}")
+
 
 # ---- DOWNLOAD CSV ----
 files.download(OUTPUT_CSV)

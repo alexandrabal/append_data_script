@@ -1,0 +1,29 @@
+create or replace view wow_leads as
+with weekly as (
+    select
+        go.week
+        ,go.channel
+        ,gs.spend
+        ,count(go.company_id) as leads
+    from growth_operations go
+    left join growth_spend_clensed_data gs
+        on  go.channel = gs.channel
+        and go.week    = gs.week
+    group by
+        go.week
+        ,go.channel
+        ,gs.spend
+)
+select
+    week
+    ,channel
+    ,spend
+    ,leads
+    ,lag(leads) over (partition by channel order by week) as prev_week_leads
+    ,leads - lag(leads) over (partition by channel order by week) as wow_change
+    ,round(
+        100.0 * (leads - lag(leads) over (partition by channel order by week))
+        / nullif(lag(leads) over (partition by channel order by week), 0)
+    , 1) as wow_pct_change
+from weekly
+order by week asc, channel;

@@ -1,10 +1,17 @@
-create or replace view wow_leads as
+
+ CREATE OR REPLACE
+ view wow_leads as
 with weekly as (
     select
         go.week
         ,go.channel
         ,gs.spend
         ,count(go.company_id) as leads
+         ,avg(time_until_verification) as avg_time_to_verified
+        ,SUM(case when go.verified = 'Yes' then 1 else 0 end) as mqls
+        ,SUM(case when go.lead_priority = 'High Priority' then 1 else 0 end) as high_priority_leads
+        ,SUM(case when go.lead_priority = 'Medium Priority' then 1 else 0 end) as medium_priority_leads
+        ,SUM(case when go.lead_priority = 'Low Priority' then 1 else 0 end) as low_priority_leads
     from growth_operations go
     left join growth_spend_clensed_data gs
         on  go.channel = gs.channel
@@ -19,6 +26,11 @@ select
     ,channel
     ,spend
     ,leads
+    ,mqls
+   ,high_priority_leads
+   ,medium_priority_leads
+   ,low_priority_leads
+   ,avg_time_to_verified
     ,lag(leads) over (partition by channel order by week) as prev_week_leads
     ,leads - lag(leads) over (partition by channel order by week) as wow_change
     ,round(
